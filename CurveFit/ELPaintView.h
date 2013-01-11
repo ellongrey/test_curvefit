@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 
-//#ifndef TARGET_OS_MAC
+#if TARGET_OS_IPHONE
 typedef UIBezierPath NSBezierPath;
 typedef UIView NSView;
 typedef UIColor NSColor;
@@ -16,12 +16,18 @@ typedef CGPoint NSPoint;
 typedef CGRect NSRect;
 #define NSMakePoint(x, y) CGPointMake(x, y)
 #define NSMakeRect(x, y, w, h) CGRectMake(x, y, w, h)
-#define pointValue CGPointValue
-#define lineToPoint addLineToPoint
-#define curveToPoint addCurveToPoint
-#define valueWithPoint valueWithCGPoint
 
-//#endif
+@interface NSValue (MacCompat)
++ (NSValue*) valueWithPoint:(NSPoint) p;
+- (NSPoint) pointValue;
+@end
+
+@interface UIBezierPath (MacCompat)
+- (void)lineToPoint:(CGPoint)point;
+- (void)curveToPoint:(CGPoint)endPoint controlPoint1:(CGPoint)controlPoint1 controlPoint2:(CGPoint)controlPoint2;
+@end
+
+#endif
 
 @interface ELStroke : NSObject <NSCoding>
 @property (nonatomic, copy) NSMutableArray* points;
@@ -37,7 +43,9 @@ typedef CGRect NSRect;
 @property (nonatomic) BOOL drawCurveOnly;
 @property (nonatomic) BOOL autoFit;
 @property (nonatomic, assign) double precision;
+#if TARGET_OS_IPHONE
 @property (nonatomic, weak, readonly) UITouch* trackingTouch;
+#endif
 
 - (NSUInteger) numPoints;
 
