@@ -11,7 +11,6 @@ from "Graphics Gems", Academic Press, 1990
 
 #include "GraphicsGems.h"					
 #include <stdio.h>
-//#include <string.h>
 #include <math.h>
 
 typedef Point2 *BezierCurve;
@@ -126,6 +125,7 @@ static void FitCubic(d, first, last, tHat1, tHat2, error)
     if (maxError < iterationError) {
 		for (i = 0; i < maxIterations; i++) {
 	    	uPrime = Reparameterize(d, first, last, u, bezCurve);
+	    	free((void *)bezCurve);
 	    	bezCurve = GenerateBezier(d, first, last, uPrime, tHat1, tHat2);
 	    	maxError = ComputeMaxError(d, first, last,
 				       bezCurve, uPrime, &splitPoint);
@@ -133,6 +133,7 @@ static void FitCubic(d, first, last, tHat1, tHat2, error)
 			DrawBezierCurve(3, bezCurve);
 			free((void *)u);
 			free((void *)bezCurve);
+			free((void *)uPrime);
 			return;
 	    }
 	    free((void *)u);
@@ -220,24 +221,22 @@ static BezierCurve  GenerateBezier(d, first, last, uPrime, tHat1, tHat2)
 
     /* Compute the determinants of C and X	*/
     det_C0_C1 = C[0][0] * C[1][1] - C[1][0] * C[0][1];
-    det_C0_X  = C[0][0] * X[1]    - C[0][1] * X[0];
+    det_C0_X  = C[0][0] * X[1]    - C[1][0] * X[0];
     det_X_C1  = X[0]    * C[1][1] - X[1]    * C[0][1];
 
     /* Finally, derive alpha values	*/
-    if (det_C0_C1 == 0.0) {
-		det_C0_C1 = (C[0][0] * C[1][1]) * 10e-12;
-    }
-    alpha_l = det_X_C1 / det_C0_C1;
-    alpha_r = det_C0_X / det_C0_C1;
+    alpha_l = (det_C0_C1 == 0) ? 0.0 : det_X_C1 / det_C0_C1;
+    alpha_r = (det_C0_C1 == 0) ? 0.0 : det_C0_X / det_C0_C1;
 
-
-    /*  If alpha negative, use the Wu/Barsky heuristic (see text) */
-	/* (if alpha is 0, you get coincident control points that lead to
-	 * divide by zero in any subsequent NewtonRaphsonRootFind() call. */
-    if (alpha_l < 1.0e-6 || alpha_r < 1.0e-6) {
-		double	dist = V2DistanceBetween2Points(&d[last], &d[first]) /
-					3.0;
-
+    /* If alpha negative, use the Wu/Barsky heuristic (see text) */
+    /* (if alpha is 0, you get coincident control points that lead to
+     * divide by zero in any subsequent NewtonRaphsonRootFind() call. */
+    double segLength = V2DistanceBetween2Points(&d[last], &d[first]);
+    double epsilon = 1.0e-6 * segLength;
+    if (alpha_l < epsilon || alpha_r < epsilon)
+    {
+		/* fall back on standard (probably inaccurate) formula, and subdivide further if needed. */
+		double dist = segLength / 3.0;
 		bezCurve[0] = d[first];
 		bezCurve[3] = d[last];
 		V2Add(&bezCurve[0], V2Scale(&tHat1, dist), &bezCurve[1]);
@@ -321,7 +320,8 @@ static double NewtonRaphsonRootFind(Q, P, u)
     numerator = (Q_u.x - P.x) * (Q1_u.x) + (Q_u.y - P.y) * (Q1_u.y);
     denominator = (Q1_u.x) * (Q1_u.x) + (Q1_u.y) * (Q1_u.y) +
 		      	  (Q_u.x - P.x) * (Q2_u.x) + (Q_u.y - P.y) * (Q2_u.y);
-    
+    if (denominator == 0.0f) return u;
+
     /* u = u - f(u)/f'(u) */
     uPrime = u - (numerator/denominator);
     return (uPrime);
