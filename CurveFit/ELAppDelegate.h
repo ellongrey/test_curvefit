@@ -19,10 +19,13 @@
 @property (nonatomic) NSMutableArray* strokes;
 @property (nonatomic, readonly) ELStroke* currStroke;
 @property (nonatomic) BOOL drawCurveOnly;
+@property (nonatomic) BOOL autoFit;
+@property (nonatomic, assign) double precision;
 
 - (NSUInteger) numPoints;
 
 - (void) setDrawCurveOnly:(BOOL)drawCurveOnly;
+- (void) setAutoFit:(BOOL)autoFit;
 
 @end
 
@@ -32,6 +35,8 @@
 @property (assign) IBOutlet NSWindow *window;
 @property (weak) IBOutlet ELPaintView *paintView;
 @property (weak) IBOutlet NSButton *chkCurveOnly;
+@property (weak) IBOutlet NSButton *chkAutoFit;
 @property (weak) IBOutlet NSButton *btnFit;
-
+@property (weak) IBOutlet NSSlider *sliderPrecision;
+@property (weak) IBOutlet NSTextField *labelPrecision;
 @end

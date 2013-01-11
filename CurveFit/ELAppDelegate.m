@@ -88,11 +88,6 @@ void DrawBezierCurve(int m, BezierCurve c)
     }
 }
 
-- (NSUInteger)fit
-{
-    return [self fitWithError: 4.0];
-}
-
 - (NSUInteger)fitWithError: (double)error
 {
     if (_curve) return _cpCount;
@@ -208,7 +203,7 @@ void DrawBezierCurve(int m, BezierCurve c)
     for (ELStroke* stroke in _strokes)
     {
         totalPtCount += stroke.points.count;
-        totalCPCount += [stroke fit];
+        totalCPCount += [stroke fitWithError: _precision];
     }
 
     NSLog(@"original pts count: %d, compressed pts count: %d", totalPtCount, totalCPCount);
@@ -220,6 +215,13 @@ void DrawBezierCurve(int m, BezierCurve c)
     if (_drawCurveOnly == drawCurveOnly) return;
     _drawCurveOnly = drawCurveOnly;
     self.needsDisplay = YES;
+}
+
+- (void)setAutoFit:(BOOL)autoFit
+{
+    if (_autoFit == autoFit) return;
+    _autoFit = autoFit;
+    if (_autoFit) [self fit];
 }
 
 - (void)mouseDown:(NSEvent *)theEvent
@@ -256,7 +258,8 @@ void DrawBezierCurve(int m, BezierCurve c)
     
     _currStroke = nil;
     
-    [self fit];
+    if (_autoFit)
+        [self fit];
 
     self.needsDisplay = YES;
 }
@@ -276,11 +279,31 @@ void DrawBezierCurve(int m, BezierCurve c)
 }
 
 - (IBAction)onCurveOnlyClick:(id)sender {
+    [self updateOptions];
+}
+
+- (IBAction)onAutoFitClick:(id)sender {
+    [self updateOptions];
+}
+
+- (IBAction)onPrecisionChanged:(id)sender {
+    [self updateOptions];
+}
+
+- (void)updateOptions
+{
     _paintView.drawCurveOnly = _chkCurveOnly.state != 0;
+    _paintView.autoFit = _chkAutoFit.state != 0;
+    float prec = _sliderPrecision.floatValue * 0.01f;
+    _paintView.precision = prec;
+    _labelPrecision.stringValue = [NSString stringWithFormat:@"Error: %.3f", prec];
+    [_btnFit setEnabled: _chkAutoFit.state ==0 && _paintView.numPoints > 0];
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
+    [self updateOptions];
+
     [_paintView addObserver:self forKeyPath:@"numPoints" options:NSKeyValueObservingOptionNew context:NULL];
     [_btnFit setEnabled:_paintView.numPoints > 0];
 }
@@ -290,7 +313,7 @@ void DrawBezierCurve(int m, BezierCurve c)
     if ([keyPath isEqual:@"numPoints"])
     {
         int numPoints = [change[NSKeyValueChangeNewKey] intValue];
-        [_btnFit setEnabled: numPoints > 0];
+        [_btnFit setEnabled: _chkAutoFit.state ==0 && numPoints > 0];
     }
 }
 
