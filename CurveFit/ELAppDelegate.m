@@ -13,7 +13,15 @@
 @implementation ELAppDelegate
 
 - (IBAction)onClearClick:(id)sender {
-    [_paintView clear];
+    NSAlert* alert = [NSAlert alertWithMessageText:@"Really want to clear?" defaultButton:@"No" alternateButton:@"Yes" otherButton:nil informativeTextWithFormat:@""];
+    
+    [alert beginSheetModalForWindow:_window modalDelegate:self didEndSelector:@selector(onAlertClear:returnCode:contextInfo:) contextInfo:nil];
+}
+
+- (void) onAlertClear:(NSAlert*)alert returnCode:(NSInteger)returnCode contextInfo:contextInfo
+{
+    if (returnCode == NSAlertAlternateReturn)
+        [_paintView clear];
 }
 
 - (IBAction)onFitClick:(id)sender {
