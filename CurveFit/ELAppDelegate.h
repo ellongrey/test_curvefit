@@ -8,10 +8,16 @@
 
 #import <Cocoa/Cocoa.h>
 
+@interface ELStroke : NSObject
+@property (nonatomic, copy) NSMutableArray* points;
+@property (nonatomic, readonly) NSBezierPath* ctrlPath;
+@property (nonatomic, readonly) NSUInteger cpCount;
+@property (nonatomic, readonly) NSBezierPath* curve;
+@end
+
 @interface ELPaintView : NSView
-@property (nonatomic) NSMutableArray* points;
-@property (nonatomic) NSBezierPath* derivedControlPath;
-@property (nonatomic) NSBezierPath* derivedCurve;
+@property (nonatomic) NSMutableArray* strokes;
+@property (nonatomic, readonly) ELStroke* currStroke;
 @property (nonatomic) BOOL drawCurveOnly;
 
 - (NSUInteger) numPoints;

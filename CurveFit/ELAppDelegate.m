@@ -18,13 +18,15 @@ static __weak NSBezierPath* g_CurrBezierControlPath = nil;
 static __weak NSBezierPath* g_CurrBezierPath = nil;
 static int g_NumCtrlPts = 0;
 
+////////////////////////////////////////////////////////////////////////
+
 void DrawBezierCurve(int m, BezierCurve c)
 {
-    NSLog(@"0:(%.3f %.3f) 1:(%.3f %.3f) 2:(%.3f %.3f) 3:(%.3f %.3f)",
-          c[0].x, c[0].y,
-          c[1].x, c[1].y,
-          c[2].x, c[2].y,
-          c[3].x, c[3].y);
+//    NSLog(@"0:(%.3f %.3f) 1:(%.3f %.3f) 2:(%.3f %.3f) 3:(%.3f %.3f)",
+//          c[0].x, c[0].y,
+//          c[1].x, c[1].y,
+//          c[2].x, c[2].y,
+//          c[3].x, c[3].y);
     
     g_NumCtrlPts += 4;
 
@@ -40,92 +42,66 @@ void DrawBezierCurve(int m, BezierCurve c)
                      controlPoint2:NSMakePoint(c[2].x, c[2].y)];
 }
 
+////////////////////////////////////////////////////////////////////////
 
-@implementation ELPaintView
+@implementation ELStroke
 
-@synthesize drawCurveOnly = _drawCurveOnly;
-
-- (id)initWithFrame:(NSRect)frameRect
+- (id)init
 {
-    self = [super initWithFrame:frameRect];
+    self = [super init];
     if (!self) return nil;
-    
-    Point2 d[7] = {	/*  Digitized points */
-        { 0.0, 0.0 },
-        { 0.0, 0.5 },
-        { 1.1, 1.4 },
-        { 2.1, 1.6 },
-        { 3.2, 1.1 },
-        { 4.0, 0.2 },
-        { 4.0, 0.0 },
-    };
     
     _points = [NSMutableArray new];
     
-    for (int i=0; i<7; ++i)
-        [_points addObject: [NSValue valueWithPoint: NSMakePoint(d[i].x * 100, d[i].y * 100)]];
+    _ctrlPath = nil; // not yet calculated
+    _curve    = nil;      // not yet calculated
     
     return self;
 }
 
-- (void)drawRect:(NSRect)dirtyRect
+- (void)drawWithCurveOnly: (BOOL) curveOnly
 {
-    const NSRect* rects;
-    NSInteger count;
-    
-    [self getRectsBeingDrawn:&rects count:&count];
-
-    NSColor* color = [NSColor colorWithSRGBRed:1.0f green:0.0f blue:0.0f alpha:1.0f];
-    
-    [color set];
-
-    if (_derivedCurve)
+    if (_curve)
     {
         [[NSColor blueColor] set];
-        [_derivedCurve stroke];
+        [_curve stroke];
     }
     
-    if (_derivedCurve && _drawCurveOnly)
+    if (_curve && curveOnly)
         return;
-
-    if (_derivedControlPath)
+    
+    if (_ctrlPath)
     {
-        [[NSColor grayColor
-          ] set];
-        [_derivedControlPath stroke];
+        [[NSColor lightGrayColor] set];
+        [_ctrlPath stroke];
     }
-
+    
     [[NSColor redColor] set];
     for (NSValue* v in _points)
     {
         NSPoint pt = [v pointValue];
         
-        NSRect ptRect = NSMakeRect(pt.x - 2.5f, pt.y - 2.5f, 5.0, 5.0);
+        const float radius = 2.0f;
+        NSRect ptRect = NSMakeRect(pt.x - radius, pt.y - radius, 2.0 * radius, 2.0 * radius);
         NSBezierPath* path = [NSBezierPath bezierPathWithOvalInRect:ptRect];
         [path fill];
     }
 }
 
-- (void) clear
+- (NSUInteger)fit
 {
-    [self willChangeValueForKey: @"numPoints"];
-
-    [_points removeAllObjects];
-    _derivedControlPath = nil;
-    _derivedCurve = nil;
-    
-    self.needsDisplay = YES;
-
-    [self didChangeValueForKey: @"numPoints"];
+    return [self fitWithError: 4.0];
 }
 
-- (void) fit
+- (NSUInteger)fitWithError: (double)error
 {
-    _derivedCurve = [NSBezierPath bezierPath];
-    _derivedControlPath = [NSBezierPath bezierPath];
+    if (_curve) return _cpCount;
     
-    g_CurrBezierPath = _derivedCurve;
-    g_CurrBezierControlPath = _derivedControlPath;
+    _curve = [NSBezierPath bezierPath];
+    _ctrlPath = [NSBezierPath bezierPath];
+    
+    g_CurrBezierPath = _curve;
+    g_CurrBezierControlPath = _ctrlPath;
     g_NumCtrlPts = 0;
     
     Point2* d = (Point2*)malloc(sizeof(Point2) * _points.count);
@@ -136,11 +112,106 @@ void DrawBezierCurve(int m, BezierCurve c)
         d[i].y = pt.y;
     }
     
-    double error = 8.0 * 8.0;		/*  Squared error */
-    FitCurve(d, (int)_points.count, error);		/*  Fit the Bezier curves */
+    double squaredError = error * error;
+    FitCurve(d, (int)_points.count, squaredError);		/*  Fit the Bezier curves */
     
-    NSLog(@"original pts count: %d, compressed pts count: %d", (int)_points.count, g_NumCtrlPts);
+    _cpCount = g_NumCtrlPts;
     
+    return _cpCount;
+}
+
+@end
+
+////////////////////////////////////////////////////////////////////////
+
+@implementation ELPaintView
+
+@synthesize drawCurveOnly = _drawCurveOnly;
+
+- (id)initWithFrame:(NSRect)frameRect
+{
+    self = [super initWithFrame:frameRect];
+    if (!self) return nil;
+    
+    _strokes = [NSMutableArray new];
+    
+    BOOL useSampleData = NO;
+    
+    if (useSampleData)
+    {
+        Point2 d[7] = {	/*  Digitized points */
+            { 0.0, 0.0 },
+            { 0.0, 0.5 },
+            { 1.1, 1.4 },
+            { 2.1, 1.6 },
+            { 3.2, 1.1 },
+            { 4.0, 0.2 },
+            { 4.0, 0.0 },
+        };
+        
+        ELStroke* stroke = [ELStroke new];
+        
+        for (int i=0; i<7; ++i)
+            [stroke.points addObject: [NSValue valueWithPoint: NSMakePoint(d[i].x * 100, d[i].y * 100)]];
+        
+        [_strokes addObject:stroke];
+    }
+    
+    _currStroke = nil;
+    
+    return self;
+}
+
+- (void)drawRect:(NSRect)dirtyRect
+{
+    const NSRect* rects;
+    NSInteger count;
+    
+    [[NSColor whiteColor] set];
+    NSRectFill(dirtyRect);
+    
+    [self getRectsBeingDrawn:&rects count:&count];
+    
+    for (ELStroke* stroke in _strokes)
+    {
+        [stroke drawWithCurveOnly: _drawCurveOnly];
+    }
+}
+
+- (NSUInteger)numPoints
+{
+    NSUInteger count = 0;
+    for (ELStroke* stroke in _strokes)
+    {
+        count += stroke.points.count;
+    }
+    return count;
+}
+
+- (void) clear
+{
+    [self willChangeValueForKey: @"numPoints"];
+    
+    [_strokes removeAllObjects];
+    _currStroke = nil;
+    
+    self.needsDisplay = YES;
+
+    [self didChangeValueForKey: @"numPoints"];
+}
+
+- (void) fit
+{
+    int totalPtCount = 0;
+    int totalCPCount = 0;
+    
+    for (ELStroke* stroke in _strokes)
+    {
+        totalPtCount += stroke.points.count;
+        totalCPCount += [stroke fit];
+    }
+
+    NSLog(@"original pts count: %d, compressed pts count: %d", totalPtCount, totalCPCount);
     self.needsDisplay = YES;
 }
 
@@ -153,39 +224,46 @@ void DrawBezierCurve(int m, BezierCurve c)
 
 - (void)mouseDown:(NSEvent *)theEvent
 {
-    if (_derivedCurve) return;
+    if (_currStroke == nil)
+    {
+        _currStroke = [ELStroke new];
+        [_strokes addObject:_currStroke];
+    }
     
-    [self willChangeValueForKey: @"numPoints"];
-
     NSPoint p = [self convertPoint: [theEvent locationInWindow] fromView: nil];
-    [_points addObject: [NSValue valueWithPoint: p]];
-    
-    [self didChangeValueForKey: @"numPoints"];
+    [_currStroke.points addObject: [NSValue valueWithPoint: p]];
 
     self.needsDisplay = YES;
 }
 
 - (void)mouseDragged:(NSEvent *)theEvent
 {
-    if (_derivedCurve) return;
-
-    [self willChangeValueForKey: @"numPoints"];
-
-    NSPoint p = [self convertPoint: [theEvent locationInWindow] fromView: nil];
-    [_points addObject: [NSValue valueWithPoint: p]];
+    if (_currStroke == nil) return;
     
-    [self didChangeValueForKey: @"numPoints"];
+    NSPoint p = [self convertPoint: [theEvent locationInWindow] fromView: nil];
+    [_currStroke.points addObject: [NSValue valueWithPoint: p]];
 
     self.needsDisplay = YES;
 }
 
-- (NSUInteger)numPoints
+- (void)mouseUp:(NSEvent *)theEvent
 {
-    return [_points count];
+    if (_currStroke == nil) return;
+    
+    [self willChangeValueForKey: @"numPoints"];
+    
+    [self didChangeValueForKey: @"numPoints"];
+    
+    _currStroke = nil;
+    
+    [self fit];
+
+    self.needsDisplay = YES;
 }
 
 @end
 
+////////////////////////////////////////////////////////////////////////
 
 @implementation ELAppDelegate
 
@@ -204,15 +282,12 @@ void DrawBezierCurve(int m, BezierCurve c)
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
     [_paintView addObserver:self forKeyPath:@"numPoints" options:NSKeyValueObservingOptionNew context:NULL];
+    [_btnFit setEnabled:_paintView.numPoints > 0];
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
-    if ([keyPath isEqual:@"hasCurve"])
-    {
-        [_chkCurveOnly setState: [change[NSKeyValueChangeNewKey] boolValue]];
-    }
-    else if ([keyPath isEqual:@"numPoints"])
+    if ([keyPath isEqual:@"numPoints"])
     {
         int numPoints = [change[NSKeyValueChangeNewKey] intValue];
         [_btnFit setEnabled: numPoints > 0];
