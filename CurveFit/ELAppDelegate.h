@@ -8,27 +8,7 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface ELStroke : NSObject <NSCoding>
-@property (nonatomic, copy) NSMutableArray* points;
-@property (nonatomic, readonly) NSBezierPath* ctrlPath;
-@property (nonatomic, readonly) NSUInteger cpCount;
-@property (nonatomic, readonly) NSBezierPath* curve;
-@property (nonatomic, readonly) NSNumber* usedPrecision;
-@end
-
-@interface ELPaintView : NSView
-@property (nonatomic) NSMutableArray* strokes;
-@property (nonatomic, readonly) ELStroke* currStroke;
-@property (nonatomic) BOOL drawCurveOnly;
-@property (nonatomic) BOOL autoFit;
-@property (nonatomic, assign) double precision;
-
-- (NSUInteger) numPoints;
-
-- (void) setDrawCurveOnly:(BOOL)drawCurveOnly;
-- (void) setAutoFit:(BOOL)autoFit;
-
-@end
+#import "ELPaintView.h"
 
 
 @interface ELAppDelegate : NSObject <NSApplicationDelegate>

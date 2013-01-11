@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9E43323516A0152600D7B97E /* ELPaintView.m in Sources */ = {isa = PBXBuildFile; fileRef = 9E43323416A0152600D7B97E /* ELPaintView.m */; };
 		9E4E4FE0169FB30400E13BE6 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9E4E4FDF169FB30400E13BE6 /* Cocoa.framework */; };
 		9E4E4FEA169FB30400E13BE6 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9E4E4FE8169FB30400E13BE6 /* InfoPlist.strings */; };
 		9E4E4FEC169FB30400E13BE6 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 9E4E4FEB169FB30400E13BE6 /* main.m */; };
@@ -18,6 +19,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		9E43323316A0152600D7B97E /* ELPaintView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ELPaintView.h; sourceTree = "<group>"; };
+		9E43323416A0152600D7B97E /* ELPaintView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ELPaintView.m; sourceTree = "<group>"; };
 		9E4E4FDB169FB30400E13BE6 /* CurveFit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CurveFit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9E4E4FDF169FB30400E13BE6 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		9E4E4FE2169FB30400E13BE6 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -94,6 +97,8 @@
 				9E4E4FF2169FB30400E13BE6 /* ELAppDelegate.m */,
 				9E4E4FF4169FB30500E13BE6 /* MainMenu.xib */,
 				9E4E4FE6169FB30400E13BE6 /* Supporting Files */,
+				9E43323316A0152600D7B97E /* ELPaintView.h */,
+				9E43323416A0152600D7B97E /* ELPaintView.m */,
 			);
 			path = CurveFit;
 			sourceTree = "<group>";
@@ -179,6 +184,7 @@
 				9E4E4FEC169FB30400E13BE6 /* main.m in Sources */,
 				9E4E4FF3169FB30400E13BE6 /* ELAppDelegate.m in Sources */,
 				9E4E5000169FB5D300E13BE6 /* GGVecLib.c in Sources */,
+				9E43323516A0152600D7B97E /* ELPaintView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
