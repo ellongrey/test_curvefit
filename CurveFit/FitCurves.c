@@ -11,7 +11,7 @@ from "Graphics Gems", Academic Press, 1990
 
 #include "GraphicsGems.h"					
 #include <stdio.h>
-//#include <malloc.h>
+//#include <string.h>
 #include <math.h>
 
 typedef Point2 *BezierCurve;
