@@ -109,7 +109,7 @@ void DrawBezierCurve(int m, BezierCurve c)
     Point2* d = (Point2*)malloc(sizeof(Point2) * _points.count);
     for (int i=0; i < _points.count; ++i)
     {
-        NSPoint pt = [_points[i] pointValue];
+        NSPoint pt = [[_points objectAtIndex:i] pointValue];
         d[i].x = pt.x;
         d[i].y = pt.y;
     }
@@ -323,7 +323,7 @@ void DrawBezierCurve(int m, BezierCurve c)
 {
     if ([keyPath isEqual:@"numPoints"])
     {
-        int numPoints = [change[NSKeyValueChangeNewKey] intValue];
+        int numPoints = [[change objectForKey: NSKeyValueChangeNewKey] intValue];
         [_btnFit setEnabled: numPoints > 0];
     }
 }
