@@ -54,9 +54,32 @@ void DrawBezierCurve(int m, BezierCurve c)
     _points = [NSMutableArray new];
     
     _ctrlPath = nil; // not yet calculated
-    _curve    = nil;      // not yet calculated
+    _curve    = nil; // not yet calculated
     
     return self;
+}
+
+- (id)initWithCoder:(NSCoder *)decoder
+{
+    self = [super init];
+    if (!self) return nil;
+
+    _ctrlPath = nil; // not yet calculated
+    _curve    = nil; // not yet calculated
+
+    _points = [decoder decodeObjectForKey:@"points"];
+    _usedPrecision = [decoder decodeObjectForKey:@"usedPrecision"];
+    
+    if (_usedPrecision)
+        [self fitWithError:[_usedPrecision doubleValue] forced:NO];
+    
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)coder
+{
+    [coder encodeObject: _points forKey:@"points"];
+    [coder encodeObject: _usedPrecision forKey:@"usedPrecision"];
 }
 
 - (void)drawWithCurveOnly: (BOOL) curveOnly
@@ -98,6 +121,8 @@ void DrawBezierCurve(int m, BezierCurve c)
     }
     
     if (_curve) return _cpCount;
+    
+    _usedPrecision = @(error);
     
     _curve = [NSBezierPath bezierPath];
     _ctrlPath = [NSBezierPath bezierPath];
@@ -202,6 +227,33 @@ void DrawBezierCurve(int m, BezierCurve c)
     [self didChangeValueForKey: @"numPoints"];
 }
 
+- (void) save: (NSURL*)url
+{
+    NSMutableData* data = [NSMutableData data];
+    NSKeyedArchiver* arc = [[NSKeyedArchiver alloc] initForWritingWithMutableData:data];
+    arc.outputFormat = NSPropertyListXMLFormat_v1_0;
+    [arc encodeObject:_strokes forKey:@"strokes"];
+    [arc finishEncoding];
+    [data writeToFile:[url path] atomically:YES];
+}
+
+- (void) load: (NSURL*)url
+{
+    NSData* data = [NSData dataWithContentsOfURL: url];
+    NSKeyedUnarchiver* arc = [[NSKeyedUnarchiver alloc] initForReadingWithData:data];
+    NSMutableArray* newStrokes = [arc decodeObjectForKey:@"strokes"];
+    [arc finishDecoding];
+
+    [self willChangeValueForKey: @"numPoints"];
+
+    _currStroke = nil;
+    _strokes = newStrokes;
+    
+    self.needsDisplay = YES;
+
+    [self didChangeValueForKey: @"numPoints"];
+}
+
 - (void) fit
 {
     return [self fitForced: YES];
@@ -300,6 +352,31 @@ void DrawBezierCurve(int m, BezierCurve c)
 
 - (IBAction)onPrecisionChanged:(id)sender {
     [self updateOptions];
+}
+
+- (IBAction)onLoadClick:(id)sender {
+    NSOpenPanel* openPanel = [NSOpenPanel openPanel];
+    
+    openPanel.allowsMultipleSelection = NO;
+    openPanel.allowedFileTypes = @[@"cfdata"];
+    openPanel.canChooseFiles = YES;
+    openPanel.canChooseDirectories = NO;
+
+    [openPanel beginSheetModalForWindow:_window completionHandler:^(NSInteger result) {
+        NSLog(@"%@", openPanel.URL);
+        [_paintView load: openPanel.URL];
+    }];
+}
+
+- (IBAction)onSaveClick:(id)sender {
+    NSSavePanel* savePanel = [NSSavePanel savePanel];
+    
+    savePanel.allowedFileTypes = @[@"cfdata"];
+    
+    [savePanel beginSheetModalForWindow:_window completionHandler:^(NSInteger result) {
+        NSLog(@"%@", savePanel.URL);
+        [_paintView save: savePanel.URL];
+    }];
 }
 
 - (void)updateOptions

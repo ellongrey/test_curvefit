@@ -8,11 +8,12 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface ELStroke : NSObject
+@interface ELStroke : NSObject <NSCoding>
 @property (nonatomic, copy) NSMutableArray* points;
 @property (nonatomic, readonly) NSBezierPath* ctrlPath;
 @property (nonatomic, readonly) NSUInteger cpCount;
 @property (nonatomic, readonly) NSBezierPath* curve;
+@property (nonatomic, readonly) NSNumber* usedPrecision;
 @end
 
 @interface ELPaintView : NSView
