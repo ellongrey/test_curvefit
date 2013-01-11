@@ -88,8 +88,15 @@ void DrawBezierCurve(int m, BezierCurve c)
     }
 }
 
-- (NSUInteger)fitWithError: (double)error
+- (NSUInteger)fitWithError: (double)error forced:(BOOL)forced
 {
+    if (forced)
+    {
+        _curve = nil;
+        _ctrlPath = nil;
+        _cpCount = 0;
+    }
+    
     if (_curve) return _cpCount;
     
     _curve = [NSBezierPath bezierPath];
@@ -197,13 +204,18 @@ void DrawBezierCurve(int m, BezierCurve c)
 
 - (void) fit
 {
+    return [self fitForced: YES];
+}
+
+- (void) fitForced: (BOOL) forced
+{
     int totalPtCount = 0;
     int totalCPCount = 0;
     
     for (ELStroke* stroke in _strokes)
     {
         totalPtCount += stroke.points.count;
-        totalCPCount += [stroke fitWithError: _precision];
+        totalCPCount += [stroke fitWithError: _precision forced:forced];
     }
 
     NSLog(@"original pts count: %d, compressed pts count: %d", totalPtCount, totalCPCount);
@@ -259,7 +271,7 @@ void DrawBezierCurve(int m, BezierCurve c)
     _currStroke = nil;
     
     if (_autoFit)
-        [self fit];
+        [self fitForced: NO];
 
     self.needsDisplay = YES;
 }
@@ -297,7 +309,6 @@ void DrawBezierCurve(int m, BezierCurve c)
     float prec = _sliderPrecision.floatValue * 0.01f;
     _paintView.precision = prec;
     _labelPrecision.stringValue = [NSString stringWithFormat:@"Error: %.3f", prec];
-    [_btnFit setEnabled: _chkAutoFit.state ==0 && _paintView.numPoints > 0];
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
@@ -313,7 +324,7 @@ void DrawBezierCurve(int m, BezierCurve c)
     if ([keyPath isEqual:@"numPoints"])
     {
         int numPoints = [change[NSKeyValueChangeNewKey] intValue];
-        [_btnFit setEnabled: _chkAutoFit.state ==0 && numPoints > 0];
+        [_btnFit setEnabled: numPoints > 0];
     }
 }
 
