@@ -35,7 +35,6 @@ void DrawBezierCurve(int m, BezierCurve c)
     [g_CurrBezierControlPath lineToPoint: NSMakePoint(c[2].x, c[2].y)];
     [g_CurrBezierControlPath lineToPoint: NSMakePoint(c[3].x, c[3].y)];
     
-    
     [g_CurrBezierPath moveToPoint: NSMakePoint(c[0].x, c[0].y)];
     [g_CurrBezierPath curveToPoint:NSMakePoint(c[3].x, c[3].y)
                      controlPoint1:NSMakePoint(c[1].x, c[1].y)
@@ -127,6 +126,10 @@ void DrawBezierCurve(int m, BezierCurve c)
     _curve = [NSBezierPath bezierPath];
     _ctrlPath = [NSBezierPath bezierPath];
     
+    _curve.lineWidth = 3.0f;
+    _curve.lineCapStyle = kCGLineCapRound;
+
+    
     g_CurrBezierPath = _curve;
     g_CurrBezierControlPath = _ctrlPath;
     g_NumCtrlPts = 0;
@@ -155,11 +158,8 @@ void DrawBezierCurve(int m, BezierCurve c)
 
 @synthesize drawCurveOnly = _drawCurveOnly;
 
-- (id)initWithFrame:(NSRect)frameRect
+- (void)awakeFromNib
 {
-    self = [super initWithFrame:frameRect];
-    if (!self) return nil;
-    
     _strokes = [NSMutableArray new];
     
     BOOL useSampleData = NO;
@@ -186,18 +186,54 @@ void DrawBezierCurve(int m, BezierCurve c)
     
     _currStroke = nil;
     
-    return self;
+    _autoFit = YES;
+    _drawCurveOnly = YES;
+    _precision = 4.0;
 }
+
+//- (id)initWithFrame:(NSRect)frameRect
+//{
+//    self = [super initWithFrame:frameRect];
+//    if (!self) return nil;
+//    
+//    _strokes = [NSMutableArray new];
+//    
+//    BOOL useSampleData = NO;
+//    
+//    if (useSampleData)
+//    {
+//        Point2 d[7] = {	/*  Digitized points */
+//            { 0.0, 0.0 },
+//            { 0.0, 0.5 },
+//            { 1.1, 1.4 },
+//            { 2.1, 1.6 },
+//            { 3.2, 1.1 },
+//            { 4.0, 0.2 },
+//            { 4.0, 0.0 },
+//        };
+//        
+//        ELStroke* stroke = [ELStroke new];
+//        
+//        for (int i=0; i<7; ++i)
+//            [stroke.points addObject: [NSValue valueWithPoint: NSMakePoint(d[i].x * 100, d[i].y * 100)]];
+//        
+//        [_strokes addObject:stroke];
+//    }
+//    
+//    _currStroke = nil;
+//    
+//    return self;
+//}
 
 - (void)drawRect:(NSRect)dirtyRect
 {
     const NSRect* rects;
     NSInteger count;
     
-    [[NSColor whiteColor] set];
-    NSRectFill(dirtyRect);
+//    [[NSColor whiteColor] set];
+//    NSRectFill(dirtyRect);
     
-    [self getRectsBeingDrawn:&rects count:&count];
+//    [self getRectsBeingDrawn:&rects count:&count];
     
     for (ELStroke* stroke in _strokes)
     {
@@ -221,8 +257,8 @@ void DrawBezierCurve(int m, BezierCurve c)
     
     [_strokes removeAllObjects];
     _currStroke = nil;
-    
-    self.needsDisplay = YES;
+
+    [self setNeedsDisplay];
     
     [self didChangeValueForKey: @"numPoints"];
 }
@@ -249,7 +285,7 @@ void DrawBezierCurve(int m, BezierCurve c)
     _currStroke = nil;
     _strokes = newStrokes;
     
-    self.needsDisplay = YES;
+    [self setNeedsDisplay];
     
     [self didChangeValueForKey: @"numPoints"];
 }
@@ -271,14 +307,16 @@ void DrawBezierCurve(int m, BezierCurve c)
     }
     
     NSLog(@"original pts count: %d, compressed pts count: %d", totalPtCount, totalCPCount);
-    self.needsDisplay = YES;
+    
+    [self setNeedsDisplay];
 }
 
 - (void)setDrawCurveOnly:(BOOL)drawCurveOnly
 {
     if (_drawCurveOnly == drawCurveOnly) return;
     _drawCurveOnly = drawCurveOnly;
-    self.needsDisplay = YES;
+    
+    [self setNeedsDisplay];
 }
 
 - (void)setAutoFit:(BOOL)autoFit
@@ -288,6 +326,61 @@ void DrawBezierCurve(int m, BezierCurve c)
     if (_autoFit) [self fit];
 }
 
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    if (_currStroke == nil)
+    {
+        _currStroke = [ELStroke new];
+        [_strokes addObject:_currStroke];
+
+        for (UITouch* touch in touches)
+        {
+            _trackingTouch = touch;
+            break;
+        }
+    }
+    
+    for (UITouch* touch in touches)
+    {
+        if (touch != _trackingTouch) continue;
+
+        NSPoint p = [touch locationInView:self];
+        [_currStroke.points addObject: [NSValue valueWithPoint: p]];
+        [self setNeedsDisplay];
+        break;
+    }
+}
+
+- (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    for (UITouch* touch in touches)
+    {
+        if (touch != _trackingTouch) continue;
+        
+        NSPoint p = [touch locationInView:self];
+        [_currStroke.points addObject: [NSValue valueWithPoint: p]];
+        [self setNeedsDisplay];
+        break;
+    }
+}
+
+- (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    for (UITouch* touch in touches)
+    {
+        if (touch != _trackingTouch) continue;
+        
+        _currStroke = nil;
+        _trackingTouch = nil;
+        if (_autoFit)
+            [self fitForced: NO];
+        
+        [self setNeedsDisplay];
+        break;
+    }
+}
+
+/*
 - (void)mouseDown:(NSEvent *)theEvent
 {
     if (_currStroke == nil)
@@ -327,6 +420,7 @@ void DrawBezierCurve(int m, BezierCurve c)
     
     self.needsDisplay = YES;
 }
+*/
 
 @end
 
